@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import BottomSheet from '../BottomSheet/BottomSheet';
 import Map from "../Map/Map";
 import SplashScreen from '../SplashScreen/SplashScreen';
 
@@ -31,6 +31,7 @@ function MapsIndoorsMap({ apiKey, gmApiKey, mapboxAccessToken, venue }) {
     return (<div className="map">
         {/* Splash screen, bottoms sheets, venue selector etc. can be here */}
         {!isMapReady && <SplashScreen />}
+        <BottomSheet></BottomSheet>
         <Map apiKey={apiKey} gmApiKey={gmApiKey} mapboxAccessToken={mapboxAccessToken} onReady={onMapReady} venueName={venue} />
     </div>)
 }
