@@ -16,7 +16,7 @@
     @include font.leading(medium);
     @include transitions.transition(quickly);
     @include font.family(system);
-    @include border.radius(x-large);
+    @include border.radius(large);
     @include background-color.gray(10);
     display: flex;
     flex-direction: row;
