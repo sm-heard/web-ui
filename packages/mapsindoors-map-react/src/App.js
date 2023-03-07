@@ -1,5 +1,4 @@
 import './App.css';
-import MapsIndoorsMap from './components/MapsIndoorsMap/MapsIndoorsMap';
 
 function App() {
     return (
@@ -11,12 +10,9 @@ function App() {
 
             <div className="app__map-container">
                 {/* This is the Map Template component */}
-                <MapsIndoorsMap
-                    apiKey="mapspeople"
-                    venue="Stigsborgvej"
-                    mapboxAccessToken={process.env.REACT_APP_MAPBOX_ACCESS_TOKEN}
-                // gmApiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY}
-                />
+                <mapsindoors-map apiKey="mapspeople" venue="Stigsborgvej"
+                    mapboxAccessToken="[INSERT-TOKEN]">
+                </mapsindoors-map>
             </div>
         </div>
     );

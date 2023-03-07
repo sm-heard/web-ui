@@ -1,13 +1,14 @@
-import { useEffect } from 'react';
-import { useState } from 'react';
-import './MapsIndoorsMap.scss';
+import React, { useEffect, useState } from 'react';
+import * as ReactDOM from 'react-dom/client';
+import reactToWebComponent from 'react-to-webcomponent';
+import useMediaQuery from '../../hooks/useMediaQuery';
+import { MapsIndoorsContext } from '../../MapsIndoorsContext';
+import BottomSheet from '../BottomSheet/BottomSheet';
 import Map from "../Map/Map";
+import Sidebar from '../Sidebar/Sidebar';
 import SplashScreen from '../SplashScreen/SplashScreen';
 import VenueSelector from '../VenueSelector/VenueSelector';
-import BottomSheet from '../BottomSheet/BottomSheet';
-import { MapsIndoorsContext } from '../../MapsIndoorsContext';
-import useMediaQuery from '../../hooks/useMediaQuery';
-import Sidebar from '../Sidebar/Sidebar';
+import './MapsIndoorsMap.scss';
 
 const mapsindoors = window.mapsindoors;
 
@@ -154,3 +155,7 @@ function MapsIndoorsMap({ apiKey, gmApiKey, mapboxAccessToken, venue, locationId
 }
 
 export default MapsIndoorsMap;
+
+const MiMap = reactToWebComponent(MapsIndoorsMap, React, ReactDOM)
+
+customElements.define('mapsindoors-map', MiMap)
