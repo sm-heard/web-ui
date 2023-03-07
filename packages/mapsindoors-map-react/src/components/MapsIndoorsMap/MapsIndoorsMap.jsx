@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import React, { useEffect, useState } from 'react';
 import * as ReactDOM from 'react-dom/client';
 import reactToWebComponent from 'react-to-webcomponent';
@@ -155,6 +156,15 @@ function MapsIndoorsMap({ apiKey, gmApiKey, mapboxAccessToken, venue, locationId
 }
 
 export default MapsIndoorsMap;
+
+MapsIndoorsMap.propTypes = {
+    apiKey: PropTypes.string,
+    gmApiKey: PropTypes.string,
+    mapboxAccessToken: PropTypes.string,
+    venue: PropTypes.string,
+    locationId: PropTypes.string,
+    primaryColor: PropTypes.string
+}
 
 const MiMap = reactToWebComponent(MapsIndoorsMap, React, ReactDOM)
 

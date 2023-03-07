@@ -15,10 +15,11 @@
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
     "react-swipeable": "^7.0.0",
+    "react-to-webcomponent": "^1.7.3",
     "react-transition-group": "^4.4.5",
     "sass": "^1.57.1",
     "web-vitals": "^2.1.4",
-    "react-to-webcomponent": "^1.7.3"
+    "prop-types": "^15.8.1"
   },
   "scripts": {
     "start": "react-scripts start",
