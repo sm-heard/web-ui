@@ -1,7 +1,6 @@
-import PropTypes from "prop-types";
+import htmlToReact from 'html-to-react';
 import React, { useEffect, useState } from 'react';
 import * as ReactDOM from 'react-dom/client';
-import reactToWebComponent from 'react-to-webcomponent';
 import { DirectionsServiceContext } from '../../DirectionsServiceContext';
 import useMediaQuery from '../../hooks/useMediaQuery';
 import { MapsIndoorsContext } from '../../MapsIndoorsContext';
@@ -23,7 +22,7 @@ const mapsindoors = window.mapsindoors;
  * @param {string} [props.locationId] - If you want the map to show a specific Location, provide the Location ID here.
  * @param {string} [props.primaryColor] - If you want the splash screen to have a custom primary color, provide the value here.
  * @param {string} [props.logo] - If you want the splash screen to have a custom logo, provide the image path or address here.
- */
+*/
 function MapsIndoorsMap({ apiKey, gmApiKey, mapboxAccessToken, venue, locationId, primaryColor, logo }) {
 
     const [isMapReady, setMapReady] = useState(false);
@@ -36,139 +35,204 @@ function MapsIndoorsMap({ apiKey, gmApiKey, mapboxAccessToken, venue, locationId
     const [directionsService, setDirectionsService] = useState();
     const isDesktop = useMediaQuery('(min-width: 992px)');
 
-    /**
-     * When venue is fitted while initializing the data, set map to be ready.
-     */
-    function venueChangedOnMap() {
-        if (isMapReady === false) {
-            setMapReady(true);
-        }
+    /** 
+     * Code related to exporting as Web Component
+    */
+
+    constructor() {
+        super();
+        this.observer = new MutationObserver(() => this.update());
+        this.observer.observe(this, { attributes: true });
     }
 
-    /**
-     * Get all the categories that are in use.
-     * Filter through them to get the unique categories.
-     *
-     * @param {array} locationsResult
-     */
-    function getCategories(locationsResult) {
-        // All the locations that have categories.
-        let locationCategories = [];
+    connectedCallback() {
+        this._innerHtml = this.innerHtml;
+        this.mount();
+    }
 
-        //The unique categories for all the locations.
-        let uniqueCategories = new Set();
+    propTypes = propTypes || {};
+    return [...attributes]
+        .filter(attr => attr.name !== 'style')
+        .map(attr => this.convert(propTypes, attr.name, attr.value))
+        .reduce((props, prop) =>
+            ({ ...props, [prop.name]: prop.value }), {});
+}
 
-        // Loop through all the locations and only select the ones that have categories.
-        locationsResult.forEach(l => {
-            if (Object.keys(l.properties.categories).length > 0) {
-                locationCategories.push(l.properties.categories)
+convert(propTypes, attrName, attrValue) {
+    const propName = Object.keys(propTypes)
+        .find(key => key.toLowerCase() == attrName);
+    let value = attrValue;
+    if (attrValue === 'true' || attrValue === 'false')
+        value = attrValue == 'true';
+    else if (!isNaN(attrValue) && attrValue !== '')
+        value = +attrValue;
+    else if (/^{.*}/.exec(attrValue))
+        value = JSON.parse(attrValue);
+    return {
+        name: propName ? propName : attrName,
+        value: value
+    };
+}
+
+disconnectedCallback() {
+    this.unmount();
+    this.observer.disconnect();
+}
+
+update() {
+    this.unmount();
+    this.mount();
+}
+
+mount() {
+    const props = {
+        ...this.getProps(this.attributes, MapsIndoorsMap.propTypes)
+        ...this.getEvents(MapsIndoorsMap.propTypes),
+        children: this.parseHtmlToReact(this.innerHtml)
+    };
+    ReactDOM.render(<MapsIndoorsMap {...props} />, this);
+}
+
+parseHtmlToReact(html) {
+    return html && new htmlToReact.Parser().parse(html);
+}
+
+getEvents(propTypes) {
+    return Object.keys(propTypes)
+        .filter(key => /on([A-Z].*)/.exec(key))
+        .reduce((events, ev) => ({
+            ...events,
+            [ev]: args =>
+                this.dispatchEvent(new CustomEvent(ev, { ...args }))
+        }), {});
+}
+
+unmount() {
+    ReactDOM.unmountComponentAtNode(this);
+}
+
+
+/**
+ * When venue is fitted while initializing the data, set map to be ready.
+ */
+function venueChangedOnMap() {
+    if (isMapReady === false) {
+        setMapReady(true);
+    }
+}
+
+/**
+ * Get all the categories that are in use.
+ * Filter through them to get the unique categories.
+ *
+ * @param {array} locationsResult
+ */
+function getCategories(locationsResult) {
+    // All the locations that have categories.
+    let locationCategories = [];
+
+    //The unique categories for all the locations.
+    let uniqueCategories = new Set();
+
+    // Loop through all the locations and only select the ones that have categories.
+    locationsResult.forEach(l => {
+        if (Object.keys(l.properties.categories).length > 0) {
+            locationCategories.push(l.properties.categories)
+        }
+    });
+
+    // Loop through the locations which have categories and create a set of unique categories.
+    locationCategories.forEach(item => {
+        Object.keys(item).forEach(value => uniqueCategories.add(value));
+    });
+
+    setCurrentCategories(uniqueCategories);
+}
+
+/*
+ * React on changes in the venue prop.
+ */
+useEffect(() => {
+    setCurrentVenueName(venue);
+}, [venue]);
+
+/**
+ * React on changes to the locationId prop: Set as current location and make the map center on it.
+ */
+useEffect(() => {
+    if (locationId) {
+        mapsindoors.services.LocationsService.getLocation(locationId).then(location => {
+            if (location) {
+                setCurrentLocation(location);
             }
         });
-
-        // Loop through the locations which have categories and create a set of unique categories.
-        locationCategories.forEach(item => {
-            Object.keys(item).forEach(value => uniqueCategories.add(value));
-        });
-
-        setCurrentCategories(uniqueCategories);
     }
+}, [locationId]);
 
-    /*
-     * React on changes in the venue prop.
-     */
-    useEffect(() => {
-        setCurrentVenueName(venue);
-    }, [venue]);
+/*
+ * React on changes in the MapsIndoors API key by fetching the required data.
+ */
+useEffect(() => {
+    setMapReady(false);
+    mapsindoors.MapsIndoors.setMapsIndoorsApiKey(apiKey);
 
-    /**
-     * React on changes to the locationId prop: Set as current location and make the map center on it.
-     */
-    useEffect(() => {
-        if (locationId) {
-            mapsindoors.services.LocationsService.getLocation(locationId).then(location => {
-                if (location) {
-                    setCurrentLocation(location);
-                }
-            });
-        }
-    }, [locationId]);
-
-    /*
-     * React on changes in the MapsIndoors API key by fetching the required data.
-     */
-    useEffect(() => {
-        setMapReady(false);
-        mapsindoors.MapsIndoors.setMapsIndoorsApiKey(apiKey);
-
-        Promise.all([
-            // Fetch all Venues in the Solution
-            mapsindoors.services.VenuesService.getVenues(),
-            // Fixme: Venue Images are currently stored in the AppConfig object. So we will need to fetch the AppConfig as well.
-            mapsindoors.services.AppConfigService.getConfig(),
-            // Fetch all Locations
-            mapsindoors.services.LocationsService.getLocations({}),
-            // Ensure a minimum waiting time of 3 seconds
-            new Promise(resolve => setTimeout(resolve, 3000))
-        ]).then(([venuesResult, appConfigResult, locationsResult]) => {
-            getCategories(locationsResult);
-            venuesResult = venuesResult.map(venue => {
-                venue.image = appConfigResult.venueImages[venue.name.toLowerCase()];
-                return venue;
-            });
-            setVenues(venuesResult);
+    Promise.all([
+        // Fetch all Venues in the Solution
+        mapsindoors.services.VenuesService.getVenues(),
+        // Fixme: Venue Images are currently stored in the AppConfig object. So we will need to fetch the AppConfig as well.
+        mapsindoors.services.AppConfigService.getConfig(),
+        // Fetch all Locations
+        mapsindoors.services.LocationsService.getLocations({}),
+        // Ensure a minimum waiting time of 3 seconds
+        new Promise(resolve => setTimeout(resolve, 3000))
+    ]).then(([venuesResult, appConfigResult, locationsResult]) => {
+        getCategories(locationsResult);
+        venuesResult = venuesResult.map(venue => {
+            venue.image = appConfigResult.venueImages[venue.name.toLowerCase()];
+            return venue;
         });
-    }, [apiKey]);
+        setVenues(venuesResult);
+    });
+}, [apiKey]);
 
 
-    return (<MapsIndoorsContext.Provider value={mapsIndoorsInstance}>
-        <DirectionsServiceContext.Provider value={directionsService}>
-            <div className="mapsindoors-map">
-                {!isMapReady && <SplashScreen logo={logo} primaryColor={primaryColor} />}
-                {venues.length > 1 && <VenueSelector onVenueSelected={selectedVenue => setCurrentVenueName(selectedVenue.name)} venues={venues} currentVenueName={currentVenueName} />}
-                {isMapReady && isDesktop
-                    ?
-                    <Sidebar
-                        currentLocation={currentLocation}
-                        setCurrentLocation={setCurrentLocation}
-                        currentCategories={currentCategories}
-                        onClose={() => setCurrentLocation(null)}
-                        onLocationsFiltered={(locations) => setFilteredLocations(locations)}
-                    />
-                    :
-                    <BottomSheet
-                        currentLocation={currentLocation}
-                        setCurrentLocation={setCurrentLocation}
-                        currentCategories={currentCategories}
-                        onLocationsFiltered={(locations) => setFilteredLocations(locations)}
-                    />
-                }
-                <Map
-                    apiKey={apiKey}
-                    gmApiKey={gmApiKey}
-                    mapboxAccessToken={mapboxAccessToken}
-                    venues={venues}
-                    venueName={currentVenueName}
-                    onVenueChangedOnMap={() => venueChangedOnMap()}
-                    onMapsIndoorsInstance={(instance) => setMapsIndoorsInstance(instance)}
-                    onDirectionsService={(instance) => setDirectionsService(instance)}
-                    onLocationClick={(location) => setCurrentLocation(location)}
-                    filteredLocationIds={filteredLocations?.map(location => location.id)} />
-            </div>
-        </DirectionsServiceContext.Provider>
-    </MapsIndoorsContext.Provider>)
-}
+return (<MapsIndoorsContext.Provider value={mapsIndoorsInstance}>
+    <DirectionsServiceContext.Provider value={directionsService}>
+        <div className="mapsindoors-map">
+            {!isMapReady && <SplashScreen logo={logo} primaryColor={primaryColor} />}
+            {venues.length > 1 && <VenueSelector onVenueSelected={selectedVenue => setCurrentVenueName(selectedVenue.name)} venues={venues} currentVenueName={currentVenueName} />}
+            {isMapReady && isDesktop
+                ?
+                <Sidebar
+                    currentLocation={currentLocation}
+                    setCurrentLocation={setCurrentLocation}
+                    currentCategories={currentCategories}
+                    onClose={() => setCurrentLocation(null)}
+                    onLocationsFiltered={(locations) => setFilteredLocations(locations)}
+                />
+                :
+                <BottomSheet
+                    currentLocation={currentLocation}
+                    setCurrentLocation={setCurrentLocation}
+                    currentCategories={currentCategories}
+                    onLocationsFiltered={(locations) => setFilteredLocations(locations)}
+                />
+            }
+            <Map
+                apiKey={apiKey}
+                gmApiKey={gmApiKey}
+                mapboxAccessToken={mapboxAccessToken}
+                venues={venues}
+                venueName={currentVenueName}
+                onVenueChangedOnMap={() => venueChangedOnMap()}
+                onMapsIndoorsInstance={(instance) => setMapsIndoorsInstance(instance)}
+                onDirectionsService={(instance) => setDirectionsService(instance)}
+                onLocationClick={(location) => setCurrentLocation(location)}
+                filteredLocationIds={filteredLocations?.map(location => location.id)} />
+        </div>
+    </DirectionsServiceContext.Provider>
+</MapsIndoorsContext.Provider>)
 
 export default MapsIndoorsMap;
-
-MapsIndoorsMap.propTypes = {
-    apiKey: PropTypes.string,
-    gmApiKey: PropTypes.string,
-    mapboxAccessToken: PropTypes.string,
-    venue: PropTypes.string,
-    locationId: PropTypes.string,
-    primaryColor: PropTypes.string
-}
-
-const MiMap = reactToWebComponent(MapsIndoorsMap, React, ReactDOM)
 
 customElements.define('mapsindoors-map', MiMap)
