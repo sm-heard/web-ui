@@ -85,7 +85,6 @@ function MapsIndoorsMap({ apiKey, gmApiKey, mapboxAccessToken, venue, locationId
                     uniqueCategories.set(key, { count: 1, displayName: location.properties.categories[key] });
                 }
             }
-
         }
 
         // Sort the categories with most locations associated.
